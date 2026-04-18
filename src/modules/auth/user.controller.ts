@@ -1,0 +1,15 @@
+import { Router } from "express";
+import UserService from "./user.service.js";
+import * as UV from "./user.validation.js"; 
+import { validation } from "../../common/middleware/validation.js";
+const authRouter = Router();
+authRouter.post("/signup",validation(UV.signUpSchema) ,UserService.signUp);
+authRouter.post("/signin", validation(UV.signInSchema), UserService.signIn);
+authRouter.patch("/confirm-email", UserService.confirmEmail);
+authRouter.post("/signup/gmail", UserService.signupWithGmail);
+authRouter.patch(
+  "/forget-password",
+  validation(UV.forgetPasswordSchema),
+  UserService.forgetPassword,
+);
+export default authRouter;

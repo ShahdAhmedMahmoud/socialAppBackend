@@ -1,0 +1,17 @@
+import { config } from 'dotenv';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const NODE_ENV = process.env.NODE_ENV;
+
+config({ path: resolve(__dirname, `../../.env.${NODE_ENV}`) });
+
+export const PORT: number = Number(process.env.PORT) || 7000;
+export const MONGO_URI: string = process.env.MONGO_URI || 'mongodb://localhost:27017/social_media_app';
+export const SALT_ROUNDS: number = Number(process.env.SALT_ROUNDS) || 10;
+export const EMAIL = process.env.EMAIL 
+export const PASSWORD = process.env.PASSWORD
+export const ACCESS_SECRET_KEY = process.env.ACCESS_SECRET_KEY ;
+export const REDIS_URL = process.env.REDIS_URL ;
