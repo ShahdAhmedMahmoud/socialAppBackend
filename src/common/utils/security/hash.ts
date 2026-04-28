@@ -6,7 +6,7 @@ export const Hash = ({
 } :{ plainText: string; salt_rounds?: number }): string => {
   return hashSync(plainText, Number(salt_rounds));
 };
-export const Compare = ({ plainText, cipherText } :{ plainText: string; cipherText: string }) => {
+export const Compare = ({ plainText, cipherText } :{ plainText: string; cipherText: string  }) => {
   return compareSync(plainText, cipherText);
 };
 

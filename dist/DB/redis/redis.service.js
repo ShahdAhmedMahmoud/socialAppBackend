@@ -1,7 +1,7 @@
 import { emailEnum } from "../../common/enum/email.enum.js";
 import { redisClient } from "./redis.db.js";
-export const revoked_key = ({ userId, iti }) => {
-    return `revokedToken::${userId}::${iti}`;
+export const revoked_key = ({ userId, jti }) => {
+    return `revokedToken::${userId}::${jti}`;
 };
 export const get_key = ({ userId }) => {
     return `revokedToken::${userId}`;
