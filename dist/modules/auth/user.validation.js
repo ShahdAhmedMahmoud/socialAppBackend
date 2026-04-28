@@ -33,3 +33,19 @@ export const forgetPasswordSchema = {
         email: z.string().email("Invalid email address"),
     }),
 };
+export const resetPasswordSchema = {
+    body: z.object({
+        email: z.string().email("Invalid email address"),
+        code: z.string().min(1, "OTP code is required"),
+        password: z.string().min(6, "Password must be at least 6 characters long"),
+        cPassword: z.string().min(6, "Confirm Password must be at least 6 characters long"),
+    }).superRefine((data, ctx) => {
+        if (data.password !== data.cPassword) {
+            ctx.addIssue({
+                code: "custom",
+                message: "Passwords don't match",
+                path: ["cPassword"],
+            });
+        }
+    }),
+};

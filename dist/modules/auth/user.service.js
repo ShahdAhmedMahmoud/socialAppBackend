@@ -4,13 +4,14 @@ import UserRepository from "../../DB/repositories/user.repository.js";
 import { encrypt } from "../../common/utils/security/encrypt.js";
 import { Compare, Hash } from "../../common/utils/security/hash.js";
 import { GenerateToken } from "../../common/utils/token.service.js";
-import { ACCESS_SECRET_KEY } from "../../config/config.service.js";
+import { ACCESS_SECRET_KEY_ADMIN, ACCESS_SECRET_KEY_USER, REFRESH_SECRET_KEY_ADMIN, REFRESH_SECRET_KEY_USER } from "../../config/config.service.js";
 import { generateOTP, sendEmail } from "../../common/utils/email/send.email.js";
 import { emailTemplate } from "../../common/utils/email/email.templete.js";
 import { eventEmitter } from "../../common/utils/email/email.events.js";
 import { emailEnum } from "../../common/enum/email.enum.js";
 import { block_otp_key, del, get, incr, max_otp_key, otp_key, set, ttl } from "../../DB/redis/redis.service.js";
-import { ProviderEnum } from "../../common/enum/user.enum.js";
+import { ProviderEnum, RoleEnum } from "../../common/enum/user.enum.js";
+import { randomUUID } from "node:crypto";
 const GOOGLE_CLIENT_ID = "1027986971476-b2pq7iu1kpu6s0tna24kqsub53b6jgi3.apps.googleusercontent.com";
 class UserService {
     _userModel = new UserRepository();
@@ -46,28 +47,6 @@ class UserService {
         });
         res.status(200).json({ message: "User signed up successfully!", data: user });
     };
-    signIn = async (req, res, next) => {
-        const { email, password } = req.body;
-        const user = await this._userModel.findOne({ filter: { email } });
-        if (!user) {
-            return next(new AppError("Invalid email or password", 401));
-        }
-        const isMatch = Compare({ plainText: password, cipherText: user.password });
-        if (!isMatch) {
-            return next(new AppError("Invalid email or password", 400));
-        }
-        const token = GenerateToken({
-            payload: { id: user._id.toString(), email: user.email },
-            secret_key: ACCESS_SECRET_KEY,
-            options: { expiresIn: "1d" },
-        });
-        const { password: _, ...userData } = user.toObject();
-        return res.status(200).json({
-            message: "User signed in successfully",
-            token,
-            data: userData,
-        });
-    };
     confirmEmail = async (req, res, next) => {
         try {
             const { email, code } = req.body;
@@ -91,6 +70,122 @@ class UserService {
             }
             await del(otp_key({ email, subject: emailEnum.confirmEmail }));
             res.status(201).json({ message: "email confirmed" });
+        }
+        catch (error) {
+            throw new AppError(error.message, 400);
+        }
+    };
+    signIn = async (req, res, next) => {
+        const { email, password } = req.body;
+        const user = await this._userModel.findOne({ filter: { email } });
+        if (!user) {
+            return next(new AppError("Invalid email or password", 401));
+        }
+        const isMatch = Compare({ plainText: password, cipherText: user.password });
+        if (!isMatch) {
+            return next(new AppError("Invalid email or password", 400));
+        }
+        const uuid = randomUUID();
+        const access_token = GenerateToken({
+            payload: { id: user._id.toString(), email: user.email },
+            secret_key: user?.role == RoleEnum.user ? ACCESS_SECRET_KEY_USER : ACCESS_SECRET_KEY_ADMIN,
+            options: { expiresIn: "1d", jwtid: uuid },
+        });
+        const refresh_token = GenerateToken({
+            payload: { id: user._id.toString(), email: user.email },
+            secret_key: user?.role == RoleEnum.user ? REFRESH_SECRET_KEY_USER : REFRESH_SECRET_KEY_ADMIN,
+            options: { expiresIn: "1d", jwtid: uuid },
+        });
+        const { password: _, ...userData } = user.toObject();
+        return res.status(200).json({
+            message: "User signed in successfully",
+            data: { userData,
+                access_token,
+                refresh_token }
+        });
+    };
+    signInWithGmail = async (req, res, next) => {
+        try {
+            const { idToken } = req.body;
+            const client = new OAuth2Client();
+            const ticket = await client.verifyIdToken({
+                idToken,
+                audience: GOOGLE_CLIENT_ID,
+            });
+            const payload = ticket.getPayload();
+            if (!payload) {
+                throw new AppError("Invalid Google token", 400);
+            }
+            const { email, email_verified, name, picture } = payload;
+            let user = await this._userModel.findOne({ filter: { email } });
+            if (!user) {
+                user = await this._userModel.create({
+                    email,
+                    confirmed: email_verified,
+                    userName: name,
+                    provider: ProviderEnum.google,
+                });
+            }
+            if (user.provider === ProviderEnum.system) {
+                throw new AppError("Please log in with system credentials only", 400);
+            }
+            const uuid = randomUUID();
+            const access_token = GenerateToken({
+                payload: { id: user._id.toString(), email: user.email },
+                secret_key: user?.role == RoleEnum.user ? ACCESS_SECRET_KEY_USER : ACCESS_SECRET_KEY_ADMIN,
+                options: { expiresIn: "1d", jwtid: uuid },
+            });
+            const refresh_token = GenerateToken({
+                payload: { id: user._id.toString(), email: user.email },
+                secret_key: user?.role == RoleEnum.user ? REFRESH_SECRET_KEY_USER : REFRESH_SECRET_KEY_ADMIN,
+                options: { expiresIn: "1d", jwtid: uuid },
+            });
+            const { password: _, ...userData } = user.toObject();
+            return res.status(200).json({
+                message: "User signed in successfully",
+                data: {
+                    userData,
+                    access_token,
+                    refresh_token,
+                },
+            });
+        }
+        catch (error) {
+            next(error instanceof AppError ? error : new AppError(error.message, 400));
+        }
+    };
+    getProfile = async (req, res, next) => {
+        return res.status(200).json({
+            message: "User signed in successfully",
+            data: { user: req.user },
+        });
+    };
+    resetpassword = async (req, res, next) => {
+        try {
+            const { email, code, password } = req.body;
+            const otpExist = await get(otp_key({ email, subject: emailEnum.forgetPassword }));
+            if (!otpExist) {
+                throw new Error("OTP expired");
+            }
+            if (!Compare({ plainText: code, cipherText: otpExist })) {
+                throw new Error("invalid OTP");
+            }
+            const user = await this._userModel.findOneAndUpdate({
+                filter: {
+                    email,
+                    confirmed: { $exists: true },
+                    provider: ProviderEnum.system,
+                },
+                update: {
+                    password: Hash({ plainText: password }),
+                    changeCredentials: Date.now(),
+                },
+            });
+            if (!user) {
+                throw new Error("user not exist");
+            }
+            await del(otp_key({ email, subject: emailEnum.forgetPassword }));
+            res.status(201).json({ message: "password reset successfully" });
         }
         catch (error) {
             throw new AppError(error.message, 400);
@@ -123,10 +218,15 @@ class UserService {
             }
             const access_token = GenerateToken({
                 payload: { id: user._id.toString(), email: user.email },
-                secret_key: ACCESS_SECRET_KEY,
+                secret_key: user?.role == RoleEnum.user ? ACCESS_SECRET_KEY_USER : ACCESS_SECRET_KEY_ADMIN,
                 options: { expiresIn: "1d" },
             });
-            res.status(201).json({ message: "success login", data: { access_token } });
+            const refresh_token = GenerateToken({
+                payload: { id: user._id.toString(), email: user.email },
+                secret_key: user?.role == RoleEnum.user ? REFRESH_SECRET_KEY_USER : REFRESH_SECRET_KEY_ADMIN,
+                options: { expiresIn: "1d" },
+            });
+            res.status(201).json({ message: "success login", data: { access_token, refresh_token } });
         }
         catch (error) {
             next(error instanceof AppError ? error : new AppError(error.message, 400));

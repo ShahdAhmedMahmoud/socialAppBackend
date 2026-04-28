@@ -5,7 +5,7 @@ import { redisClient } from "./redis.db.js";
 
 export interface RevokedKeyParams {
   userId: string;
-  iti: string;
+  jti: string;
 }
 
 export interface UserKeyParams {
@@ -21,8 +21,8 @@ export interface EmailKeyParams {
   email: string;
 }
 
-export const revoked_key = ({ userId, iti }: RevokedKeyParams): string => {
-  return `revokedToken::${userId}::${iti}`;
+export const revoked_key = ({ userId, jti }: RevokedKeyParams): string => {
+  return `revokedToken::${userId}::${jti}`;
 };
 
 export const get_key = ({ userId }: UserKeyParams): string => {

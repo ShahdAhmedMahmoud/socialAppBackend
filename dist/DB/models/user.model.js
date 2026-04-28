@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     confirmed: { type: Boolean },
     role: { type: String, enum: RoleEnum, default: RoleEnum.user },
     gender: { type: String, enum: GenderEnum, default: GenderEnum.male },
-    provider: { type: String, enum: ProviderEnum, default: ProviderEnum.LOCAL },
+    provider: { type: String, enum: ProviderEnum, default: ProviderEnum.system },
 }, { timestamps: true, strictQuery: true, strict: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 userSchema.virtual("userName").get(function () {
     return `${this.firstName} ${this.lastName}`;
