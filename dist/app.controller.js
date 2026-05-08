@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import multer from "multer";
 import ratelimit from "express-rate-limit";
 import helmet from "helmet";
 import { PORT } from "./config/config.service.js";
@@ -7,6 +8,7 @@ import { AppError, globalErrorHandler } from "./common/utils/global-error-handle
 import authRouter from "./modules/auth/user.controller.js";
 import { checkConnectionDB } from "./DB/connectionDB.js";
 import { redisConnection } from "./DB/redis/redis.db.js";
+import UserModel from "./DB/models/user.model.js";
 const app = express();
 const port = Number(PORT);
 const bootstrap = () => {

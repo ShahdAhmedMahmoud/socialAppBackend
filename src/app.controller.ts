@@ -1,6 +1,7 @@
 import express from "express";
 import type { Request,Response,NextFunction } from "express";
 import cors from "cors";
+import multer from "multer"
 
 import ratelimit from "express-rate-limit";
 import helmet from "helmet";
@@ -9,6 +10,7 @@ import { AppError, globalErrorHandler } from "./common/utils/global-error-handle
 import authRouter from "./modules/auth/user.controller.js";
 import { checkConnectionDB } from "./DB/connectionDB.js";
 import { redisConnection } from "./DB/redis/redis.db.js";
+import UserModel from "./DB/models/user.model.js";
 const app: express.Application = express();
 const port: number = Number(PORT);
 const bootstrap = () => {
@@ -23,6 +25,25 @@ const bootstrap = () => {
     });
     app.use(express.json());
     app.use(cors(),helmet(), limiter);
+
+//    async function test (){
+
+//         let user = new UserModel({
+//             userName:"Shahd Ahmed",
+//             email:`Shahd${Date.now()}@gmail.com`,
+//             password:123456789
+
+//         })
+     
+//         await user.save()
+//         // await user.updateOne({})
+//         user.userName="Shosho Ahmed"
+//         await user.save()
+
+//     }
+//     test()
+
+
     checkConnectionDB();
     redisConnection();
     app.use("/auth", authRouter);

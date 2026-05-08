@@ -9,7 +9,8 @@ export var GenderEnum;
     GenderEnum["male"] = "male";
     GenderEnum["female"] = "female";
 })(GenderEnum || (GenderEnum = {}));
-export const ProviderEnum = {
-    system: "system",
-    google: "google"
-};
+export var ProviderEnum;
+(function (ProviderEnum) {
+    ProviderEnum["system"] = "system";
+    ProviderEnum["google"] = "google";
+})(ProviderEnum || (ProviderEnum = {}));

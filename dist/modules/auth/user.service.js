@@ -12,9 +12,11 @@ import { emailEnum } from "../../common/enum/email.enum.js";
 import { block_otp_key, del, get, incr, max_otp_key, otp_key, set, ttl } from "../../DB/redis/redis.service.js";
 import { ProviderEnum, RoleEnum } from "../../common/enum/user.enum.js";
 import { randomUUID } from "node:crypto";
+import { S3Service } from "../../common/service/s3.service.js";
 const GOOGLE_CLIENT_ID = "1027986971476-b2pq7iu1kpu6s0tna24kqsub53b6jgi3.apps.googleusercontent.com";
 class UserService {
     _userModel = new UserRepository();
+    _s3Service = new S3Service();
     constructor() { }
     signUp = async (req, res, next) => {
         const { userName, email, password, age, phone, address, gender } = req.body;
@@ -260,6 +262,13 @@ class UserService {
             });
             await incr(max_otp_key({ email }));
         });
+    };
+    uploadImage = async (req, res, next) => {
+        const urls = await this._s3Service.uploadFiles({
+            files: req.files,
+            path: "users/files"
+        });
+        res.status(201).json({ message: "success upload", data: urls });
     };
     forgetPassword = async (req, res, next) => {
         try {

@@ -10,7 +10,7 @@ export enum GenderEnum {
     
 }
 
-export const ProviderEnum = {
-    system:"system",
-    google:"google"
+export enum ProviderEnum  {
+    system="system",
+    google="google"
 }

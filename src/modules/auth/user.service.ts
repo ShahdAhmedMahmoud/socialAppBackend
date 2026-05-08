@@ -18,6 +18,7 @@ import { emailEnum, type EmailEnum } from "../../common/enum/email.enum.js";
 import { block_otp_key, del, get, incr, max_otp_key, otp_key, set, ttl } from "../../DB/redis/redis.service.js";
 import { ProviderEnum, RoleEnum } from "../../common/enum/user.enum.js";
 import { randomUUID } from "node:crypto";
+import { S3Service } from "../../common/service/s3.service.js";
 
 
 
@@ -32,9 +33,9 @@ interface GooglePayload {
 
 class UserService {
   private readonly _userModel = new UserRepository();
+  private readonly _s3Service = new S3Service();
 
   constructor() {}
-
   signUp = async (req: Request, res: Response, next: NextFunction) => {
     const { userName, email, password, age, phone, address, gender }: ISignUpType = req.body;
 
@@ -93,7 +94,6 @@ class UserService {
       throw new AppError((error as Error).message, 400);
     }
   };
-
   signIn = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password }: ISignInType = req.body;
 
@@ -102,7 +102,7 @@ class UserService {
       return next(new AppError("Invalid email or password", 401));
     }
 
-    const isMatch = Compare({ plainText: password, cipherText: user.password });
+    const isMatch = Compare({ plainText: password, cipherText: user.password! });
     if (!isMatch) {
       return next(new AppError("Invalid email or password", 400));
     }
@@ -192,8 +192,6 @@ class UserService {
     next(error instanceof AppError ? error : new AppError((error as Error).message, 400));
   }
 };
-
-
   getProfile = async (req: Request, res: Response, next: NextFunction) => {
 
     return res.status(200).json({
@@ -317,6 +315,17 @@ class UserService {
     });
     await incr(max_otp_key({ email }));
   });
+};
+   uploadImage = async (req: Request, res: Response, next: NextFunction) => {
+
+    const urls = await this._s3Service.uploadFiles({
+      files:req.files as Express.Multer.File[],
+      path:"users/files"
+    })
+    
+res.status(201).json({ message: "success upload" , data:urls })
+
+
 };
 
 forgetPassword = async (req: Request, res: Response, next: NextFunction) => {
