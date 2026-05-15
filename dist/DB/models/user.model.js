@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema({
     phone: { type: String },
     address: { type: String },
     confirmed: { type: Boolean },
+    profilePicture: String,
     role: { type: String, enum: RoleEnum, default: RoleEnum.user },
     gender: { type: String, enum: GenderEnum, default: GenderEnum.male },
     provider: { type: String, enum: ProviderEnum, default: ProviderEnum.system },

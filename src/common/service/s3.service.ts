@@ -1,10 +1,12 @@
-import {ObjectCannedACL, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
+import {DeleteObjectCommand, DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, ObjectCannedACL, PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import { AWS_ACCESS_KEY, AWS_BUCKET_NAME, AWS_REGION, AWS_SECRET_ACCESS_KEY } from "../../config/config.service.js";
 import { randomUUID } from "node:crypto";
 import  { storage_enum } from "../enum/multer.enum.js";
 import fs from "node:fs"
 import { AppError } from "../utils/global-error-handler.js";
 import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
 
 export class S3Service {
 
@@ -34,7 +36,7 @@ export class S3Service {
         const command = new PutObjectCommand({
             Bucket:AWS_BUCKET_NAME,
             ACL,
-            Key:`social_media_app_2/${path}/${randomUUID}__${file.originalname}`,
+            Key:`social_media_app_2/${path}/${randomUUID()}__${file.originalname}`,
             Body:storage_type  === storage_enum.memory? file.buffer : fs.createReadStream(file.path),
             ContentType:file.mimetype
         })
@@ -65,7 +67,7 @@ export class S3Service {
             params:{
             Bucket:AWS_BUCKET_NAME,
             ACL,
-            Key:`social_media_app_2/${path}/${randomUUID}__${file.originalname}`,
+            Key:`social_media_app_2/${path}/${randomUUID()}__${file.originalname}`,
             Body:storage_type  === storage_enum.memory? file.buffer : fs.createReadStream(file.path),
             ContentType:file.mimetype
             }
@@ -106,4 +108,99 @@ export class S3Service {
         }
         return urls
     }
+
+    async createPreSingleUrl({
+        path,
+        fileName,
+        ContentType,
+        expiresIn=3600
+       
+    }:{
+        path:string
+        fileName:string,
+        ContentType?:string,
+        expiresIn?:number
+        
+    }){
+        const Key =`social_media_app_2/${path}/${randomUUID()}__${fileName}`
+        const command = new PutObjectCommand({
+            Bucket:AWS_BUCKET_NAME,
+            Key,
+            ContentType
+        })
+        const url = await getSignedUrl(this.client,command,{expiresIn})
+        return {url , Key}
+    }
+    async getFile(Key:string){
+        const command = new GetObjectCommand({
+            Bucket: AWS_BUCKET_NAME,
+            Key
+        })
+        return await this.client.send(command)
+
+    }
+
+    
+    async getPreSingleUrl({
+        Key,
+        expiresIn=3600 ,
+        download
+    }:{
+        Key:string,
+        expiresIn?:number ,
+        download?:string|undefined
+    }){ 
+        console.log(download,'download')
+        const command = new GetObjectCommand({
+            Bucket:AWS_BUCKET_NAME,
+            Key,
+            ResponseContentDisposition:download? `attachment; filename="${Key.split("/").pop()}"` : undefined  
+        })
+        const url = await getSignedUrl(this.client,command,{expiresIn})
+        return url
+    }
+
+     async getFiles(folderName:string){
+        const command = new ListObjectsV2Command({
+            Bucket: AWS_BUCKET_NAME,
+            Prefix : `social_media_app_2/${folderName}`
+        })
+        return await this.client.send(command)
+
+    }
+     async deleteFile(Key:string){
+        const command = new DeleteObjectCommand({
+            Bucket: AWS_BUCKET_NAME,
+            Key 
+        })
+        return await this.client.send(command)
+
+    }
+     async deleteFiles(Keys:string[]){
+        const KeyMapped = Keys.map((k)=>{
+            return {Key:k}
+        })
+
+
+        const command = new DeleteObjectsCommand({
+            Bucket: AWS_BUCKET_NAME,
+            Delete:{
+                Objects:KeyMapped,
+                Quiet: false
+            },
+
+        })
+        return await this.client.send(command)
+
+    }
+     async deleteFolder(folderName:string){
+       const data = await this.getFiles(folderName)
+       const KeyMapped = data?.Contents?.map((k)=>{
+            return k.Key
+        })
+        return await this.deleteFiles(KeyMapped as string[])
+    }
+
+
+
 }

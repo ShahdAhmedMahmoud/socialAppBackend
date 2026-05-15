@@ -263,12 +263,12 @@ class UserService {
             await incr(max_otp_key({ email }));
         });
     };
-    uploadImage = async (req, res, next) => {
+    upload = async (req, res, next) => {
         const urls = await this._s3Service.uploadFiles({
             files: req.files,
-            path: "users/files"
+            path: `users/${req?.user?._id}`
         });
-        res.status(201).json({ message: "success upload", data: urls });
+        res.status(201).json({ message: "success upload", data: { urls } });
     };
     forgetPassword = async (req, res, next) => {
         try {

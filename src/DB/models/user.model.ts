@@ -21,6 +21,7 @@ export interface IUser {
     confirmed?: boolean;
     role?:RoleEnum;
     gender?:GenderEnum;
+    profilePicture?:string;
     provider?:ProviderEnum;
     createdAt: Date;
     updatedAt: Date;
@@ -37,6 +38,7 @@ const userSchema = new mongoose.Schema<IUser>({
     phone: { type: String },
     address: { type: String },
     confirmed: { type: Boolean },
+    profilePicture:String,
     role: { type: String, enum: RoleEnum, default: RoleEnum.user },
     gender: { type: String, enum: GenderEnum, default: GenderEnum.male},
     provider: { type: String, enum: ProviderEnum, default: ProviderEnum.system },

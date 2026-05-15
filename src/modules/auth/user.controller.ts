@@ -23,6 +23,8 @@ authRouter.patch(
 );
 authRouter.get("/profile",authenticaion,UserService.getProfile)
 
-authRouter.post("/upload",multerCloud({storage_type:storage_enum.memory}).array("attachments"),UserService.uploadImage)
+authRouter.post("/upload",authenticaion
+  ,multerCloud({storage_type:storage_enum.memory}).array("attachments")
+  ,UserService.upload)
 
 export default authRouter;

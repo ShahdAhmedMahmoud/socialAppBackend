@@ -316,14 +316,31 @@ class UserService {
     await incr(max_otp_key({ email }));
   });
 };
-   uploadImage = async (req: Request, res: Response, next: NextFunction) => {
+   upload = async (req: Request, res: Response, next: NextFunction) => {
 
     const urls = await this._s3Service.uploadFiles({
       files:req.files as Express.Multer.File[],
-      path:"users/files"
+      path:`users/${req?.user?._id}`
     })
+    // const {fileName, ContentType} = req.body
+
+    // const {url , Key}= await this._s3Service.createPreSingleUrl({
+      
+    //   path:`users/${req.user?._id}`,
+    //   fileName,
+    //   ContentType
+
+    // })
+
+    // await this._userModel.findOneAndUpdate({
+    //   filter:{_id:req.user?._id},
+    //   update:{profilePicture:Key}
+    // })
+ 
+
+
     
-res.status(201).json({ message: "success upload" , data:urls })
+res.status(201).json({ message: "success upload" , data:{urls}})
 
 
 };
